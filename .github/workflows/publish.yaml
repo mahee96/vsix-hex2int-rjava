@@ -65,12 +65,12 @@ jobs:
             feat=$(git log $PTAG..$TAG --pretty=format:'   (%h) %s\n' --grep="-\[Feature\]:") 
             api=$(git log $PTAG..$TAG --pretty=format:'   (%h) %s\n' --grep="-\[API\]:")
           fi
-          echo '## [Bug-Fixes]:'     >> RELEASE_LOG.md
-          echo "$bug"                >> RELEASE_LOG.md
-          echo '## [Features]:'      >> RELEASE_LOG.md
-          echo "$feat"               >> RELEASE_LOG.md
-          echo '## [API-Changes]:'   >> RELEASE_LOG.md
-          echo "$api"                >> RELEASE_LOG.md
+          echo '### [Bug-Fixes]:'     >> RELEASE_LOG.md
+          echo "$bug"                 >> RELEASE_LOG.md
+          echo '### [Features]:'      >> RELEASE_LOG.md
+          echo "$feat"                >> RELEASE_LOG.md
+          echo '### [API-Changes]:'   >> RELEASE_LOG.md
+          echo "$api"                 >> RELEASE_LOG.md
     
       - name: Validate RELEASE_LOG.md 
         if: ${{ env.version }}
@@ -80,7 +80,7 @@ jobs:
             echo "RELEASE_LOG.md" must exist and cannot be empty.
             exit 1
           else
-            header="# Changelog for v${{ env.version }}: "
+            header="## Changelog for v${{ env.version }}: "
             echo "$header" >> CHANGELOG.md
             cat RELEASE_LOG.md >> CHANGELOG.md
           fi
