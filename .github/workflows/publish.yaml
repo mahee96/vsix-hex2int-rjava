@@ -1,0 +1,120 @@
+name: Publish Extension
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: publish-env
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Extract Version from Commit Message
+        id: extract-version
+        run: |
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          VERSION=$(echo "$COMMIT_MESSAGE" | sed -n 's/.*\[v\([0-9]\{1,2\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\).*/\1/p')
+          if [[ -z "$VERSION" ]]; then
+            echo "Skipping remaining steps. Reason: NON-Release commit (Version number not found)."
+            exit 0
+          fi
+          echo "version=$VERSION" >> $GITHUB_ENV
+
+      - name: Update package.json with Version
+        if: ${{ env.version }}
+        run: |
+          VERSION="${{ env.version }}"
+          echo "Updating package.json with version: $VERSION"
+          npm version $VERSION --no-git-tag-version  --allow-same-version
+
+      - name: Create New Release tag
+        if: ${{ env.version }}
+        run: |
+          VERSION="v${{ env.version }}"
+          git tag "$VERSION"
+
+      - name: Generate CHANGELOG.md
+        if: ${{ env.version }}
+        run: |
+          TAG=$(git tag  sed -n -e '1p')
+          PTAG=$(git tag  sed -n -e '2p') 
+          echo "" >> RELEASE_LOG.md
+          bug='';feat='';api=''
+          if [[ -z $PTAG ]]; then
+            # No previous tags, generate CHANGELOG from all commits
+            bug=$(git log --pretty=format:'   (%h) %s\n' --grep="-\[Bug\]:")
+            feat=$(git log --pretty=format:'   (%h) %s\n' --grep="-\[Feature\]:")
+            api=$(git log --pretty=format:'   (%h) %s\n' --grep="-\[API\]:")
+          else
+            bug=$(git log $PTAG..$TAG --pretty=format:'   (%h) %s\n' --grep="-\[Bug\]:") 
+            feat=$(git log $PTAG..$TAG --pretty=format:'   (%h) %s\n' --grep="-\[Feature\]:") 
+            api=$(git log $PTAG..$TAG --pretty=format:'   (%h) %s\n' --grep="-\[API\]:")
+          fi
+          echo '## [Bug-Fixes]:'     >> RELEASE_LOG.md
+          echo "$bug"                >> RELEASE_LOG.md
+          echo '## [Features]:'      >> RELEASE_LOG.md
+          echo "$feat"               >> RELEASE_LOG.md
+          echo '## [API-Changes]:'   >> RELEASE_LOG.md
+          echo "$api"                >> RELEASE_LOG.md
+          cat RELEASE_LOG.md
+          git log --pretty=format:'   (%h) %s\n'
+          git branch
+          git tag
+          git reflog
+          git log
+    
+      - name: Validate RELEASE_LOG.md 
+        if: ${{ env.version }}
+        run: |
+          RELEASE_LOG=$(cat RELEASE_LOG.md)
+          if [[ -z $RELEASE_LOG ]]; then
+            echo "RELEASE_LOG.md" must exist and cannot be empty.
+            exit 1
+          else
+            echo '' >> CHANGELOG.md
+            cat RELEASE_LOG.md >> CHANGELOG.md
+          fi
+  
+      # - name: Publish Extension
+      #   if: ${{ env.version }}
+      #   env:
+      #     VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+      #   run: |
+      #     npx vsce publish --pat $VSCE_PAT
+
+      - name: Commit Tag, CHANGELOG and package.json
+        if: ${{ env.version }}
+        run: |
+          VERSION="v${{ env.version }}"
+          git pull --force
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHANGELOG.md
+          git add package.json
+          git commit -m "[$VERSION-RELEASE]: Published to marketplace"
+          git push origin main --tags --force
+
+      - name: Create Release
+        if: ${{ env.version }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "v${{ env.version }}"
+          release_name: "v${{ env.version }}"
+          body-path: RELEASE_LOG.md
