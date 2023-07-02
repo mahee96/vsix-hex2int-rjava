@@ -71,12 +71,6 @@ jobs:
           echo "$feat"               >> RELEASE_LOG.md
           echo '## [API-Changes]:'   >> RELEASE_LOG.md
           echo "$api"                >> RELEASE_LOG.md
-          cat RELEASE_LOG.md
-          git log --pretty=format:'   (%h) %s\n'
-          git branch
-          git tag
-          git reflog
-          git log
     
       - name: Validate RELEASE_LOG.md 
         if: ${{ env.version }}
@@ -86,16 +80,17 @@ jobs:
             echo "RELEASE_LOG.md" must exist and cannot be empty.
             exit 1
           else
-            echo '' >> CHANGELOG.md
+            header="# Changelog for v${{ env.version }}: "
+            echo "$header" >> CHANGELOG.md
             cat RELEASE_LOG.md >> CHANGELOG.md
           fi
   
-      # - name: Publish Extension
-      #   if: ${{ env.version }}
-      #   env:
-      #     VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
-      #   run: |
-      #     npx vsce publish --pat $VSCE_PAT
+      - name: Publish Extension
+        if: ${{ env.version }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+        run: |
+          npx vsce publish --pat $VSCE_PAT
 
       - name: Commit Tag, CHANGELOG and package.json
         if: ${{ env.version }}
