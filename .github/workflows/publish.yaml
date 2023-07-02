@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-
+ 
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -106,7 +106,7 @@ jobs:
           git config --local user.name "GitHub Action"
           git add CHANGELOG.md
           git add package.json
-          git commit -m "[$VERSION-RELEASE]: Published to marketplace"
+          git commit -m "-[$VERSION-RELEASE]: Published to marketplace"
           git push origin main --tags --force
 
       - name: Create Release
