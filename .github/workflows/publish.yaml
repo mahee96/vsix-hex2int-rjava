@@ -85,12 +85,12 @@ jobs:
             cat RELEASE_LOG.md >> CHANGELOG.md
           fi
   
-      - name: Publish Extension
-        if: ${{ env.version }}
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
-        run: |
-          npx vsce publish --pat $VSCE_PAT
+      # - name: Publish Extension
+      #   if: ${{ env.version }}
+      #   env:
+      #     VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+      #   run: |
+      #     npx vsce publish --pat $VSCE_PAT
 
       - name: Commit Tag, CHANGELOG and package.json
         if: ${{ env.version }}
